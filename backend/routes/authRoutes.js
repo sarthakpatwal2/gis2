@@ -7,12 +7,18 @@ const router = express.Router();
 
 // Signup Route
 router.post("/signup", async (req, res) => {
-  const { username, password } = req.body;
+  console.log("Request Body:", req.body);
+  const { name, email, password } = req.body;
+  // Rest of the code...
   try {
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
     const result = await pool.query(
-      "INSERT INTO users (username, password) VALUES ($1, $2) RETURNING *",
-      [username, hashedPassword]
+      "INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING *",
+      [name, email, hashedPassword]
     );
     res.status(201).json({ message: "User created", user: result.rows[0] });
   } catch (error) {
@@ -20,6 +26,8 @@ router.post("/signup", async (req, res) => {
     res.status(500).json({ message: "Error creating user" });
   }
 });
+
+
 
 // Login Route
 router.post("/login", async (req, res) => {

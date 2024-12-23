@@ -42,13 +42,43 @@ function Signin({ onLogin }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ maxWidth: "400px", margin: "auto" }}>
-      <h2>Signin</h2>
+    <form
+      onSubmit={handleSubmit}
+      style={{
+        maxWidth: "400px",
+        margin: "50px auto",
+        padding: "20px",
+        background: "#f9f9f9",
+        border: "1px solid #ddd",
+        borderRadius: "8px",
+        boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
+        fontFamily: "Arial, sans-serif",
+      }}
+    >
+      <h2
+        style={{
+          marginBottom: "20px",
+          fontSize: "24px",
+          color: "#333",
+          textAlign: "center",
+        }}
+      >
+        Signin
+      </h2>
       <input
         name="username"
         placeholder="Username"
         onChange={handleChange}
         required
+        style={{
+          width: "100%",
+          padding: "12px 15px",
+          marginBottom: "15px",
+          border: "1px solid #ccc",
+          borderRadius: "6px",
+          fontSize: "16px",
+          boxSizing: "border-box",
+        }}
       />
       <input
         name="password"
@@ -56,10 +86,37 @@ function Signin({ onLogin }) {
         placeholder="Password"
         onChange={handleChange}
         required
+        style={{
+          width: "100%",
+          padding: "12px 15px",
+          marginBottom: "15px",
+          border: "1px solid #ccc",
+          borderRadius: "6px",
+          fontSize: "16px",
+          boxSizing: "border-box",
+        }}
       />
-      <button type="submit">Signin</button>
+      <button
+        type="submit"
+        style={{
+          width: "100%",
+          padding: "12px 15px",
+          fontSize: "16px",
+          backgroundColor: "#007bff",
+          color: "#fff",
+          border: "none",
+          borderRadius: "6px",
+          cursor: "pointer",
+          transition: "background-color 0.3s ease",
+        }}
+        onMouseOver={(e) => (e.target.style.backgroundColor = "#0056b3")}
+        onMouseOut={(e) => (e.target.style.backgroundColor = "#007bff")}
+      >
+        Signin
+      </button>
     </form>
   );
+  
 }
 
 export default Signin;

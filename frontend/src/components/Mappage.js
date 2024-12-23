@@ -1,12 +1,16 @@
-import React, { useState, useEffect } from "react";
-//import "./App.css";
-import "leaflet/dist/leaflet.css";
-import { MapContainer, TileLayer, FeatureGroup, useMap } from "react-leaflet";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  MapContainer,
+  TileLayer,
+  FeatureGroup,
+} from "react-leaflet";
 import { EditControl } from "react-leaflet-draw";
-import "leaflet-draw/dist/leaflet.draw.css";
+import { useMap } from "react-leaflet";
 import L from "leaflet";
 import parseGeoraster from "georaster";
 import GeoRasterLayer from "georaster-layer-for-leaflet";
+import "leaflet/dist/leaflet.css";
+import "leaflet-draw/dist/leaflet.draw.css";
 
 delete L.Icon.Default.prototype._getIconUrl;
 
@@ -64,55 +68,40 @@ function GeoTiffLayer({ file }) {
   return null;
 }
 
+
+
 function MapPage() {
   const [file, setFile] = useState(null);
   const [mapFeatures, setMapFeatures] = useState([]);
+  const [savedMaps, setSavedMaps] = useState([]);
+  const [selectedMap, setSelectedMap] = useState(null);
+  const mapRef = useRef();
+
+  // Define fetchSavedMaps at the top of the MapPage function
+const fetchSavedMaps = async () => {
+  const userId = localStorage.getItem("user_id");
+  if (!userId) {
+    alert("User not logged in!");
+    return;
+  }
+
+  try {
+    const response = await fetch(`http://localhost:5000/api/maps?user_id=${userId}`);
+    const data = await response.json();
+    setSavedMaps(data.maps);
+  } catch (err) {
+    console.error("Error fetching saved maps:", err);
+  }
+};
+
+// Example: If used in useEffect, call fetchSavedMaps when the component mounts
+useEffect(() => {
+  fetchSavedMaps(); // Load saved maps on component mount
+}, []);
+
 
   const handleFileChange = (event) => {
     setFile(event.target.files[0]);
-  };
-
-  const _created = (e) => {
-    const layer = e.layer;
-    const featureData = layer.toGeoJSON();
-
-    setMapFeatures((prevFeatures) => [...prevFeatures, featureData]);
-
-    if (layer instanceof L.Marker) {
-      const { lat, lng } = layer.getLatLng();
-      layer.bindPopup("Loading information...").openPopup();
-
-      fetch(
-        `https://api.opencagedata.com/geocode/v1/json?q=${lat},${lng}&key=67ce3a9c73234561bc3bedeeaa41afc9`
-      )
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          return response.json();
-        })
-        .then((data) => {
-          if (data.results && data.results.length > 0) {
-            const place = data.results[0];
-            const placeInfo = `
-              <b>Formatted Address:</b> ${place.formatted}<br />
-              <b>Country:</b> ${place.components.country}<br />
-              <b>State:</b> ${place.components.state || "N/A"}<br />
-            `;
-            layer.setPopupContent(placeInfo).openPopup();
-          } else {
-            layer
-              .setPopupContent("No information available for this location.")
-              .openPopup();
-          }
-        })
-        .catch((error) => {
-          layer
-            .setPopupContent("Failed to fetch location info. Please try again.")
-            .openPopup();
-          console.error("API Error:", error);
-        });
-    }
   };
 
   const handleSave = async () => {
@@ -123,9 +112,9 @@ function MapPage() {
     }
   
     const payload = {
-      user_id: parseInt(userId, 10), // Convert to integer
-      name: "User's Map",
-      data: mapFeatures, // Assuming mapFeatures contains the map data
+      user_id: parseInt(userId, 10),
+      name: prompt("Enter a name for your map:", "User's Map") || "User's Map",
+      data: mapFeatures,
     };
   
     try {
@@ -133,15 +122,16 @@ function MapPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`, // Include token if required
         },
         body: JSON.stringify(payload),
       });
   
       if (response.ok) {
         alert("Map saved successfully!");
+        fetchSavedMaps();
       } else {
-        alert("Failed to save map.");
+        const errorData = await response.json();
+        alert(`Failed to save map: ${errorData.message || "Unknown error"}`);
       }
     } catch (err) {
       console.error("Error saving map:", err);
@@ -149,12 +139,55 @@ function MapPage() {
     }
   };
   
+
+  const handleMapSelect = (map) => {
+    setSelectedMap(map);
+  };
+  
+  useEffect(() => {
+    if (!selectedMap || !mapRef.current) return;
+  
+    const loadMapFeatures = () => {
+      // Clear existing layers except the base TileLayer
+      mapRef.current.eachLayer((layer) => {
+        if (!(layer instanceof L.TileLayer)) {
+          mapRef.current.removeLayer(layer);
+        }
+      });
+  
+      // Load the GeoJSON data from the selected map
+      const geoJsonLayer = L.geoJSON(selectedMap.data).addTo(mapRef.current);
+  
+      // Adjust the map view to fit the bounds of the new features
+      const bounds = geoJsonLayer.getBounds();
+      if (bounds.isValid()) {
+        mapRef.current.fitBounds(bounds);
+      }
+    };
+  
+    loadMapFeatures();
+  }, [selectedMap]);
+  
+
   return (
     <div style={{ position: "relative" }}>
-      <MapContainer center={[28.3949, 84.124]} zoom={7} style={{ height: "100vh", zIndex: 0 }}>
-        {file && <GeoTiffLayer file={file} />}
+      <MapContainer
+        center={[28.3949, 84.124]}
+        zoom={7}
+        style={{ height: "100vh", zIndex: 0 }}
+        whenCreated={(map) => {
+          mapRef.current = map;
+        }}
+      >
+        {file && <GeoTiffLayer file={file} mapRef={mapRef} />}
         <FeatureGroup>
-          <EditControl position="topright" onCreated={_created} />
+          <EditControl
+            position="topright"
+            onCreated={(e) => {
+              const layer = e.layer;
+              setMapFeatures((prev) => [...prev, layer.toGeoJSON()]);
+            }}
+          />
         </FeatureGroup>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -195,6 +228,35 @@ function MapPage() {
       >
         Save Map
       </button>
+
+      <div
+        style={{
+          position: "absolute",
+          top: "200px",
+          left: "10px",
+          zIndex: 1000,
+        }}
+      >
+       <select
+  onChange={(e) =>
+    handleMapSelect(savedMaps.find((map) => map.id === parseInt(e.target.value, 10)))
+  }
+  style={{
+    padding: "10px",
+    backgroundColor: "white",
+    border: "1px solid #ccc",
+    borderRadius: "10px",
+    width: "200px",
+  }}
+>
+  <option value="">Select a saved map</option>
+  {savedMaps.map((map) => (
+    <option key={map.id} value={map.id}>
+      {map.name}
+    </option>
+  ))}
+</select>
+      </div>
     </div>
   );
 }

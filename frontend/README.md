@@ -1,5 +1,21 @@
 # Getting Started with Create React App
 
+CREATE TABLE maps (
+    id SERIAL PRIMARY KEY,
+    user_id INT REFERENCES users(id),
+    name VARCHAR(100) NOT NULL,
+    data JSONB NOT NULL, -- To store map features like markers, layers
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,           -- Unique user identifier
+    username VARCHAR(255) NOT NULL, -- Username (must be unique if required)
+    email VARCHAR(255) NOT NULL UNIQUE, -- Email (unique constraint)
+    password TEXT NOT NULL,         
+);
+
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
 ## Available Scripts
