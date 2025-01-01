@@ -26,7 +26,7 @@ function Signup() {
     if (response.ok) {
       localStorage.setItem("isAuthenticated", "true"); // Save auth status
       navigate("/");
-      alert("Signup successful! Please login.");
+      
     } else {
       alert("Signup failed!");
     }
